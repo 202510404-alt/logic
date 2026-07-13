@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.desertcore'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "papermc-repo"
+        url = "https://repo.papermc.io/repository/maven-public/"
+    }
+    maven {
+        name = "sonatype"
+        url = "https://oss.sonatype.org/content/groups/public/"
+    }
+}
+
+dependencies {
+    // 1. 페이퍼 서버 API 개발 도구
+    compileOnly "io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT"
+
+    // 2. 코어 3D 회전에 필수적인 JOML 수학 라이브러리 강제 추가 (에러 해결 핵심)
+    compileOnly "org.joml:joml:1.10.5"
+}
+
+def targetJavaVersion = 21
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        options.release.set(targetJavaVersion)
+    }
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+    inputs.property "version", project.version
+
+    filesNotMatching("**/*.png") {
+        expand project.properties
+    }
+}
+
+// ────────────────────────────────────────────────────────
+// [통합 자동화 스크립트] 빌드 후 리얼데저트(서버)로 자동 이사
+// ────────────────────────────────────────────────────────
+tasks.register('autoDeploy') {
+    dependsOn tasks.named('jar')
+
+    doLast {
+        // 💡 바탕화면에 있는 진짜 서버 폴더인 '리얼데저트' 내부의 plugins 경로로 정밀 수정했습니다.
+        def serverPluginsDir = file("C:/Users/user/Desktop/리얼데저트/plugins")
+
+        def buildJarFile = file("${layout.buildDirectory.get().asFile}/libs/${project.name}-${project.version}.jar")
+
+        if (buildJarFile.exists()) {
+            if (!serverPluginsDir.exists()) {
+                serverPluginsDir.mkdirs() // 폴더가 없으면 새로 생성
+            }
+            copy {
+                from buildJarFile
+                into serverPluginsDir
+            }
+            println "🚀 [자동화] 최신 플러그인 파일을 리얼데저트(서버) plugins 폴더로 이사 완료!"
+        }
+    }
+}
