@@ -1,0 +1,4 @@
+name: realdesertcore
+version: '1.0-SNAPSHOT'
+main: com.desertcore.realdesertcore.Realdesertcore
+api-version: '1.21'
